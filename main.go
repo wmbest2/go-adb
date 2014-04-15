@@ -7,19 +7,19 @@ import (
     "github.com/wmbest2/adb"
 )
 
-func runOnDevice(wg *sync.WaitGroup, d *adb.Device, params []string) {
+func runOnDevice(wg *sync.WaitGroup, d *adb.Device, params *[]string) {
     defer wg.Done()
-    fmt.Printf("%s\n", d)
-    v,_ := d.AdbExec(params...)
+    v,_ := d.AdbExec(*params...)
     fmt.Printf("%s\n", string(v))
 }
 
 func runOnAll(params []string) []byte {
     var wg sync.WaitGroup
-    devices := adb.AdbDevices(nil)
+    devices := adb.ListDevices(nil)
     for _,d := range devices {
         wg.Add(1)
-        go runOnDevice(&wg, d, params)
+        fmt.Printf("%s\n", d)
+        go runOnDevice(&wg, d, &params)
     }
     wg.Wait()
     return []byte("")
@@ -73,7 +73,7 @@ func main() {
         } else if (flag.Arg(0) == "uninstall") {
             out = runOnAll(args)
         } else {
-            out,_ = adb.AdbExec(flag.Args()...)
+            out,_ = adb.Exec(flag.Args()...)
         }
     }
     fmt.Sprint(string(out))
