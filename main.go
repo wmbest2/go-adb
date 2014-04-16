@@ -4,12 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"github.com/wmbest2/android/adb"
+	"os"
 	"sync"
 )
 
 func runOnDevice(wg *sync.WaitGroup, d *adb.Device, params *[]string) {
 	defer wg.Done()
-	v, _ := d.AdbExec(*params...)
+	v, _ := d.ExecSync(*params...)
 	fmt.Printf("%s\n", string(v))
 }
 
@@ -36,6 +37,21 @@ func flagFromBool(f bool, s string) *string {
 		result = ""
 	}
 	return &result
+}
+
+func runAndPrint(args ...string) {
+    output := adb.Exec(args...)
+    out_ok := true
+    for {
+        var v interface{}
+        if !out_ok {
+            break
+        }
+        switch v, out_ok = <-output; v.(type) {
+        case string:
+            fmt.Print(v.(string))
+        }
+    }
 }
 
 func main() {
@@ -68,28 +84,27 @@ func main() {
 
 	var out []byte
 	if *s != "" {
-		fmt.Printf("Serial: %s\n", *s)
-		d := adb.FindDevice(*s)
-		out, _ = d.AdbExec(flag.Args()...)
+        runAndPrint(os.Args[1:]...)
 	} else {
+		switch flag.Arg(0) {
+        case "install":
+			out = runOnAll(args)
+        case "uninstall":
+			out = runOnAll(args)
+        case "devices":
+            fmt.Println("List of devices attached")
+            devices := adb.ListDevices(nil)
 
-		if flag.Arg(0) == "install" {
-			out = runOnAll(args)
-		} else if flag.Arg(0) == "uninstall" {
-			out = runOnAll(args)
-		} else {
-			output := adb.Exec(flag.Args()...)
-			out_ok := true
-			for {
-				var v interface{}
-				if !out_ok {
-					break
-				}
-				switch v, out_ok = <-output; v.(type) {
-				case string:
-					fmt.Print(v.(string))
-				}
-			}
+            if len(devices) == 0 {
+                out = []byte("No devices found\n")
+            } else {
+                for _, d := range devices {
+                    out = append(out, []byte(fmt.Sprintln(d.String()))...)
+                }
+                out = append(out, []byte(fmt.Sprintln("\n"))...)
+            }
+        default:
+            runAndPrint(flag.Args()...)
 		}
 	}
 	fmt.Print(string(out))
