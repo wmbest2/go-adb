@@ -4,7 +4,7 @@ import (
     "fmt"
     "flag"
     "sync"
-    "github.com/wmbest2/adb"
+    "github.com/wmbest2/android/adb"
 )
 
 func runOnDevice(wg *sync.WaitGroup, d *adb.Device, params *[]string) {
@@ -16,6 +16,11 @@ func runOnDevice(wg *sync.WaitGroup, d *adb.Device, params *[]string) {
 func runOnAll(params []string) []byte {
     var wg sync.WaitGroup
     devices := adb.ListDevices(nil)
+    
+    if len(devices) == 0 {
+        return []byte("No devices found\n");
+    }
+
     for _,d := range devices {
         wg.Add(1)
         fmt.Printf("%s\n", d)
@@ -73,8 +78,8 @@ func main() {
         } else if (flag.Arg(0) == "uninstall") {
             out = runOnAll(args)
         } else {
-            out,_ = adb.Exec(flag.Args()...)
+            out,_ = adb.ExecSync(flag.Args()...)
         }
     }
-    fmt.Sprint(string(out))
+    fmt.Print(string(out))
 }
