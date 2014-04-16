@@ -78,7 +78,18 @@ func main() {
         } else if (flag.Arg(0) == "uninstall") {
             out = runOnAll(args)
         } else {
-            out,_ = adb.ExecSync(flag.Args()...)
+            output := adb.Exec(flag.Args()...)
+            out_ok := true
+            for {
+                var v interface{}
+                if !out_ok {
+                    break
+                }
+                switch v, out_ok = <-output; v.(type) {
+                case string:
+                    fmt.Print(v.(string))
+                }
+            }
         }
     }
     fmt.Print(string(out))
