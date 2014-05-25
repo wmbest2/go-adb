@@ -48,13 +48,14 @@ func runAndPrint(args ...string) {
             break
         }
         switch v, out_ok = <-output; v.(type) {
-        case string:
-            fmt.Print(v.(string))
+        case []byte:
+            fmt.Print(string(v.([]byte)))
         }
     }
 }
 
 func main() {
+
 	s := flag.String("s", "", "directs command to the device or emulator with the given\nserial number or qualifier. Overrides ANDROID_SERIAL\n environment variable.")
 	p := flag.String("p", "", "directs command to the device or emulator with the given\nserial number or qualifier. Overrides ANDROID_SERIAL\n environment variable.")
 	a := flag.Bool("a", false, "directs adb to listen on all interfaces for a connection")
