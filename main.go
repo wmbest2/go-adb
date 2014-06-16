@@ -10,7 +10,7 @@ import (
 
 func runOnDevice(wg *sync.WaitGroup, d *adb.Device, params *[]string) {
 	defer wg.Done()
-	v, _ := d.Host.ShellSync(d, *params...)
+	v := d.Host.ShellSync(d, *params...)
 	fmt.Printf("%s\n", string(v))
 }
 
