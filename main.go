@@ -10,7 +10,7 @@ import (
 
 func runOnDevice(wg *sync.WaitGroup, d *adb.Device, params *[]string) {
 	defer wg.Done()
-	v := d.Host.ShellSync(d, *params...)
+	v := adb.ShellSync(d, *params...)
 	fmt.Printf("%s\n", string(v))
 }
 
@@ -40,8 +40,8 @@ func flagFromBool(f bool, s string) *string {
 }
 
 func runAndPrint(args ...string) {
-	adb := adb.Default
-	output := adb.Shell(adb, args...)
+	a := adb.Default
+	output := adb.Shell(a, args...)
 	out_ok := true
 	for {
 		var v interface{}
