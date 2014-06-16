@@ -10,7 +10,7 @@ import (
 
 func runOnDevice(wg *sync.WaitGroup, d *adb.Device, params *[]string) {
 	defer wg.Done()
-	v, _ := d.ExecSync(*params...)
+	v, _ := d.Host.ShellSync(d, *params...)
 	fmt.Printf("%s\n", string(v))
 }
 
@@ -40,18 +40,19 @@ func flagFromBool(f bool, s string) *string {
 }
 
 func runAndPrint(args ...string) {
-    output := adb.Exec(args...)
-    out_ok := true
-    for {
-        var v interface{}
-        if !out_ok {
-            break
-        }
-        switch v, out_ok = <-output; v.(type) {
-        case []byte:
-            fmt.Print(string(v.([]byte)))
-        }
-    }
+	adb := adb.Default
+	output := adb.Shell(adb, args...)
+	out_ok := true
+	for {
+		var v interface{}
+		if !out_ok {
+			break
+		}
+		switch v, out_ok = <-output; v.(type) {
+		case []byte:
+			fmt.Printf("%s\n", v.([]byte))
+		}
+	}
 }
 
 func main() {
@@ -85,27 +86,27 @@ func main() {
 
 	var out []byte
 	if *s != "" {
-        runAndPrint(os.Args[1:]...)
+		runAndPrint(os.Args[1:]...)
 	} else {
 		switch flag.Arg(0) {
-        case "install":
+		case "install":
 			out = runOnAll(args)
-        case "uninstall":
+		case "uninstall":
 			out = runOnAll(args)
-        case "devices":
-            fmt.Println("List of devices attached")
-            devices := adb.ListDevices(nil)
+		case "devices":
+			fmt.Println("List of devices attached")
+			devices := adb.ListDevices(nil)
 
-            if len(devices) == 0 {
-                out = []byte("No devices found\n")
-            } else {
-                for _, d := range devices {
-                    out = append(out, []byte(fmt.Sprintln(d.String()))...)
-                }
-                out = append(out, []byte(fmt.Sprintln("\n"))...)
-            }
-        default:
-            runAndPrint(flag.Args()...)
+			if len(devices) == 0 {
+				out = []byte("No devices found\n")
+			} else {
+				for _, d := range devices {
+					out = append(out, []byte(fmt.Sprintln(d.String()))...)
+				}
+				out = append(out, []byte(fmt.Sprintln("\n"))...)
+			}
+		default:
+			runAndPrint(flag.Args()...)
 		}
 	}
 	fmt.Print(string(out))
