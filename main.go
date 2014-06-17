@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/wmbest2/android/adb"
-	"os"
 	"sync"
 )
 
@@ -39,9 +38,8 @@ func flagFromBool(f bool, s string) *string {
 	return &result
 }
 
-func runAndPrint(args ...string) {
-	a := adb.Default
-	output := adb.Shell(a, args...)
+func runAndPrint(t adb.Transporter, args ...string) {
+	output := adb.Shell(t, args...)
 	out_ok := true
 	for {
 		var v interface{}
@@ -86,7 +84,8 @@ func main() {
 
 	var out []byte
 	if *s != "" {
-		runAndPrint(os.Args[1:]...)
+		device := adb.Default.FindDevice(*s)
+		runAndPrint(&device, flag.Args()...)
 	} else {
 		switch flag.Arg(0) {
 		case "install":
@@ -106,7 +105,7 @@ func main() {
 				out = append(out, []byte(fmt.Sprintln("\n"))...)
 			}
 		default:
-			runAndPrint(flag.Args()...)
+			runAndPrint(adb.Default, flag.Args()...)
 		}
 	}
 	fmt.Print(string(out))
