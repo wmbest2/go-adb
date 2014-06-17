@@ -104,6 +104,9 @@ func main() {
 				}
 				out = append(out, []byte(fmt.Sprintln("\n"))...)
 			}
+		case "ls":
+			out, _ := adb.Ls(adb.Default)
+			fmt.Println(out)
 		default:
 			runAndPrint(adb.Default, flag.Args()...)
 		}
