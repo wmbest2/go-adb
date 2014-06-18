@@ -14,9 +14,8 @@ func runOnDevice(wg *sync.WaitGroup, d *adb.Device, params *[]string) {
 	fmt.Printf("%s\n", string(v))
 }
 
-func runOnAll(params []string) []byte {
+func runOnAll(devices []*adb.Device, params ...string) []byte {
 	var wg sync.WaitGroup
-	devices := adb.ListDevices(nil)
 
 	if len(devices) == 0 {
 		return []byte("No devices found\n")
@@ -52,6 +51,18 @@ func runAndPrint(t adb.Transporter, args ...string) {
 			fmt.Printf("%s\n", v.([]byte))
 		}
 	}
+}
+
+func install(file string) {
+	f, _ := os.Open(file)
+	devices := adb.ListDevices(nil)
+	stat, _ := f.Stat()
+	loc := fmt.Sprintf("/data/local/tmp/%s", stat.Name())
+	adb.PushDevices(devices, f, loc)
+
+	runOnAll(devices, "pm", "install", "-r", loc)
+	runOnAll(devices, "rm", loc)
+
 }
 
 func main() {
@@ -95,12 +106,13 @@ func main() {
 		f, _ := os.Open(flag.Arg(1))
 		adb.Push(t, f, flag.Arg(2))
 	case "install":
-		out = runOnAll(args)
+		install(flag.Arg(1))
 	case "uninstall":
-		out = runOnAll(args)
-	case "devices":
-		fmt.Println("List of devices attached")
 		devices := adb.ListDevices(nil)
+		out = runOnAll(devices, args...)
+	case "devices":
+		devices := adb.ListDevices(nil)
+		fmt.Println("List of devices attached")
 
 		if len(devices) == 0 {
 			out = []byte("No devices found\n")
