@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/wmbest2/android/adb"
+	"os"
 	"sync"
 )
 
@@ -83,33 +84,36 @@ func main() {
 	args = append(args, flag.Args()...)
 
 	var out []byte
+	t := adb.Transporter(adb.Default)
 	if *s != "" {
 		device := adb.Default.FindDevice(*s)
-		runAndPrint(&device, flag.Args()...)
-	} else {
-		switch flag.Arg(0) {
-		case "install":
-			out = runOnAll(args)
-		case "uninstall":
-			out = runOnAll(args)
-		case "devices":
-			fmt.Println("List of devices attached")
-			devices := adb.ListDevices(nil)
+		t = adb.Transporter(&device)
+	}
 
-			if len(devices) == 0 {
-				out = []byte("No devices found\n")
-			} else {
-				for _, d := range devices {
-					out = append(out, []byte(fmt.Sprintln(d.String()))...)
-				}
-				out = append(out, []byte(fmt.Sprintln("\n"))...)
+	switch flag.Arg(0) {
+	case "push":
+		f, _ := os.Open(flag.Arg(1))
+		adb.Push(t, f, flag.Arg(2))
+	case "install":
+		out = runOnAll(args)
+	case "uninstall":
+		out = runOnAll(args)
+	case "devices":
+		fmt.Println("List of devices attached")
+		devices := adb.ListDevices(nil)
+
+		if len(devices) == 0 {
+			out = []byte("No devices found\n")
+		} else {
+			for _, d := range devices {
+				out = append(out, []byte(fmt.Sprintln(d.String()))...)
 			}
-		case "ls":
-			out, _ := adb.Ls(adb.Default)
-			fmt.Println(out)
-		default:
-			runAndPrint(adb.Default, flag.Args()...)
+			out = append(out, []byte(fmt.Sprintln("\n"))...)
 		}
+	case "ls":
+		adb.Ls(t, flag.Arg(1))
+	default:
+		runAndPrint(t, flag.Args()...)
 	}
 	fmt.Print(string(out))
 }
