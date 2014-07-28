@@ -89,13 +89,13 @@ func un(s string, startTime time.Time) {
 	log.Println("  END:", s, "ElapsedTime in seconds:", endTime.Sub(startTime))
 }
 
-func install(file string) {
+func install(conn *adb.Adb, file string) {
 	f, _ := os.Open(file)
-	devices := adb.ListDevices(nil)
+	devices := conn.ListDevices(nil)
 	fmt.Printf("%s:\n", time.Now())
 	stat, _ := f.Stat()
 	loc := fmt.Sprintf("/sdcard/tmp/%s", stat.Name())
-	err := adb.PushDevices(devices, f, loc)
+	err := adb.PushFileToDevices(devices, f, loc)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -104,8 +104,8 @@ func install(file string) {
 	runCommands(devices, []string{"pm", "install", "-r", loc}, []string{"rm", loc})
 }
 
-func uninstall(args ...string) {
-	devices := adb.ListDevices(nil)
+func uninstall(conn *adb.Adb, args ...string) {
+	devices := conn.ListDevices(nil)
 	runCommands(devices, append([]string{"pm"}, args...))
 }
 
@@ -132,7 +132,7 @@ func logcat(t adb.Transporter) {
 	cmd := fmt.Sprintf("export ANDROID_LOG_TAGS=\"%s\" ; logcat", lc_tags)
 	out := adb.Shell(t, cmd)
 	for line := range out {
-		fmt.Print(p.Sprint(string(line)))
+		fmt.Printf("%s", p.Sprint(line))
 	}
 }
 
@@ -144,6 +144,9 @@ var (
 	e = flag.Bool("e", false, "directs command to the device or emulator with the given serial number or qualifier. Overrides ANDROID_SERIAL  environment variable.")
 	H = flag.String("H", "", "directs command to the device or emulator with the given serial number or qualifier. Overrides ANDROID_SERIAL  environment variable.")
 	P = flag.String("P", "", "directs command to the device or emulator with the given serial number or qualifier. Overrides ANDROID_SERIAL  environment variable.")
+
+	address = flag.String("address", "localhost", "Directs your adb commands to a remote machine, default: localhost")
+	port    = flag.Int("port", 5037, "Directs your adb commands to another port, default: 5037")
 
 	lc        = flag.NewFlagSet("logcat [options] PACKAGES(colon-separated)", flag.ExitOnError)
 	lc_clear  = lc.Bool("clear", false, "clear (flush) the entire log and exit")
@@ -160,6 +163,8 @@ func main() {
 	dFlag := flagFromBool(*d, "d")
 	eFlag := flagFromBool(*e, "e")
 
+	conn := adb.Connect(*address, *port)
+
 	allParams := []*string{aFlag, dFlag, eFlag, p, H, P}
 	params := make([]string, 0, 7)
 	for _, param := range allParams {
@@ -174,16 +179,16 @@ func main() {
 	args = append(args, flag.Args()...)
 
 	var out []byte
-	t := adb.Transporter(adb.Default)
+	t := adb.Transporter(conn)
 	if *s != "" {
-		device := adb.Default.FindDevice(*s)
+		device := conn.FindDevice(*s)
 		t = adb.Transporter(&device)
 	}
 
 	switch flag.Arg(0) {
 	case "push":
 		f, _ := os.Open(flag.Arg(1))
-		adb.Push(t, f, flag.Arg(2))
+		adb.PushFileTo(t, f, flag.Arg(2))
 	case "pull":
 		f, _ := os.Create(flag.Arg(2))
 		err := adb.Pull(t, f, flag.Arg(1))
@@ -194,13 +199,13 @@ func main() {
 	case "logcat":
 		logcat(t)
 	case "install":
-		install(flag.Arg(1))
+		install(conn, flag.Arg(1))
 	case "uninstall":
-		uninstall(args...)
+		uninstall(conn, args...)
 	case "screencap":
 		screenshot(t, flag.Arg(1))
 	case "devices":
-		devices := adb.ListDevices(nil)
+		devices := conn.ListDevices(nil)
 		fmt.Println("List of devices attached")
 
 		if len(devices) == 0 {
@@ -213,8 +218,10 @@ func main() {
 		}
 	case "ls":
 		adb.Ls(t, flag.Arg(1))
-	default:
+	case "shell":
 		runAndPrint(t, flag.Args()...)
+	default:
+		fmt.Println("Usage adb command")
 	}
 	fmt.Print(string(out))
 }
