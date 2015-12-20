@@ -109,12 +109,12 @@ func uninstall(conn *adb.Adb, args ...string) {
 	runCommands(devices, append([]string{"pm"}, args...))
 }
 
-func screenshot(t adb.Transporter, filename string) {
+func screenshot(conn adb.Transporter, filename string) {
 	f, err := os.Create(filename)
 	if err != nil {
 		return
 	}
-	f.Write(adb.ShellSync(t, "screencap", "-p"))
+	f.Write(adb.Frame(conn))
 	f.Close()
 }
 
